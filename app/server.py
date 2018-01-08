@@ -8,7 +8,7 @@ import tornado.web
 
 from app.base_handler import BaseHandler
 from app.tornado_middleware.middleware_app import build_app
-from app.jaeger_tracer.middleware import JaegerTracerMiddleware
+from app.jaeger_tornado_tracer.middleware import JaegerTracerMiddleware
 
 
 PORT = 8888
