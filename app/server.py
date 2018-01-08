@@ -7,7 +7,7 @@ import tornado.gen
 import tornado.web
 
 from app.base_handler import BaseHandler
-from app.middleware.middleware_app import build_app
+from app.tornado_middleware.middleware_app import build_app
 from app.jaeger_tracer.middleware import JaegerTracerMiddleware
 
 
@@ -44,20 +44,25 @@ def make_application():
         (r"/", ExampleHandler)
     ]
 
+    middlewares = [
+        get_jaeger_middleware()
+    ]
+
+    app = build_app(middlewares, routes, debug=True)
+    return app
+
+
+def get_jaeger_middleware():
     config_doc = {
         "sampler": {
             "type": "const",
             'param': 1,
         },
+        "client_hooks": "all",
         "logging": True,
     }
 
-    middlewares = [
-        JaegerTracerMiddleware(config=config_doc, service_name="jaeger-tornado-example")
-    ]
-
-    app = build_app(middlewares, routes, debug=True)
-    return app
+    return JaegerTracerMiddleware(config=config_doc, service_name="jaeger-tornado-example")
 
 
 if __name__ == '__main__':

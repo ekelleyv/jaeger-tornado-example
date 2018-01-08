@@ -17,10 +17,11 @@ class JaegerTracerMiddleware(object):
         self._initializer.initialize_tracer()
 
     @gen.coroutine
-    def __call__(self, request, _, next_mw):
+    def __call__(self, request, handler, next_mw):
         # TODO find out if the route can be read from handler
         request_wrapper = http_server.TornadoRequestWrapper(request=request)
         span = http_server.before_request(request=request_wrapper)
+        span.set_operation_name("{0}: {1}".format(request.method, handler.__class__.__name__))
         try:
             with request_context.span_in_stack_context(span=span):
                 next_mw_future = next_mw()  # cannot yield inside StackContext
