@@ -1,1 +1,4 @@
+jaeger-client==3.7.1
+opentracing==1.2.2
+opentracing-instrumentation==2.3.0
 tornado==4.5.1

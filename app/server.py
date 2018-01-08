@@ -5,6 +5,7 @@ import tornado.httpclient
 import tornado.gen
 import tornado.web
 
+from app import tracing
 from app.base_handler import BaseHandler
 
 
@@ -40,6 +41,10 @@ def make_application():
     routes = [
         (r"/", ExampleHandler)
     ]
+
+    tracing.install_patches()
+    tracing.init_tracer()
+
     return tornado.web.Application(routes, debug=True)
 
 
