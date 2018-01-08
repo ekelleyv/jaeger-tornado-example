@@ -1,12 +1,14 @@
 import sys
 import logging
 
+import tornado.httpserver
 import tornado.httpclient
 import tornado.gen
 import tornado.web
 
-from app import tracing
 from app.base_handler import BaseHandler
+from app.middleware.middleware_app import build_app
+from app.jaeger_tracer.middleware import JaegerTracerMiddleware
 
 
 PORT = 8888
@@ -42,10 +44,20 @@ def make_application():
         (r"/", ExampleHandler)
     ]
 
-    tracing.install_patches()
-    tracing.init_tracer()
+    config_doc = {
+        "sampler": {
+            "type": "const",
+            'param': 1,
+        },
+        "logging": True,
+    }
 
-    return tornado.web.Application(routes, debug=True)
+    middlewares = [
+        JaegerTracerMiddleware(config=config_doc, service_name="jaeger-tornado-example")
+    ]
+
+    app = build_app(middlewares, routes, debug=True)
+    return app
 
 
 if __name__ == '__main__':
