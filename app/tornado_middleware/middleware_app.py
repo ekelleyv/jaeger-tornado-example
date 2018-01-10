@@ -1,62 +1,49 @@
 import logging
 
-from tornado.web import Application
-from tornado.web import _RequestDispatcher
+import tornado.web
 
 from .middleware_handler import MiddlewareHandler
 
 log = logging.getLogger(__name__)
 
 
-class MiddlewareApp(Application):
-    """Middleware-aware Application class.
+def get_middleware_app(base=tornado.web.Application):
+    class MiddlewareApp(base):
+        """Middleware-aware Application class.
 
-    This basically replaces the default
-    :class:`tornado.web._RequestDispatcher` with a
-    :class:`MiddlewareDispatcher`.
+        This basically replaces the default
+        :class:`tornado.web._RequestDispatcher` with a
+        :class:`MiddlewareDispatcher`.
 
-    Normally, this shouldn't be used directly as it will be constructed by
-    :func:`build_app`.
-    """
+        Normally, this shouldn't be used directly as it will be constructed by
+        :func:`build_app`.
+        """
 
-    def __init__(self, middlewares, *args, **kwargs):
-        super(MiddlewareApp, self).__init__(*args, **kwargs)
-        self.middlewares = middlewares
+        def __init__(self, middlewares, *args, **kwargs):
+            super(MiddlewareApp, self).__init__(*args, **kwargs)
+            self.middlewares = middlewares
 
-    def start_request(self, server_conn, request_conn):
-        return MiddlewareDispatcher(
-            self.middlewares, self, request_conn)
+        def find_handler(self, request):
+            handler_delegate = super(MiddlewareApp, self).find_handler(request)
 
-    def __call__(self, request):
-        dispatcher = MiddlewareDispatcher(self.middlewares, self, None)
-        dispatcher.set_request(request)
-        return dispatcher.execute()
+            args = {
+                'kwargs': handler_delegate.handler_kwargs,
+                'middlewares': self.middlewares,
+                'handler_class': handler_delegate.handler_class,
+            }
 
+            handler_delegate.handler_class = MiddlewareHandler
+            handler_delegate.handler_kwargs = args
+            return handler_delegate
 
-class MiddlewareDispatcher(_RequestDispatcher):
-    """Middleware-aware request dispatcher.
+        def __call__(self, request):
+            dispatcher = self.find_handler(request)
+            return dispatcher.execute()
 
-    The dispatcher delegates all work to the default dispatcher, but it
-    injects a :class:`MiddlewareHandler` as handler for all requests, which
-    will actually run the middlewares.
-    """
-    def __init__(self, middlewares, *args, **kwargs):
-        super(MiddlewareDispatcher, self).__init__(*args, **kwargs)
-        self.middlewares = middlewares
-
-    def _find_handler(self):
-
-        super(MiddlewareDispatcher, self)._find_handler()
-        args = {
-            'kwargs': self.handler_kwargs,
-            'middlewares': self.middlewares,
-            'handler_class': self.handler_class,
-        }
-        self.handler_class = MiddlewareHandler
-        self.handler_kwargs = args
+    return MiddlewareApp
 
 
-def build_app(middlewares, *args, **kwargs):
+def build_app(base_app, middlewares, *args, **kwargs):
     """Create a Tornado ``Application`` object with optional support for
     middlewares.
 
@@ -77,6 +64,6 @@ def build_app(middlewares, *args, **kwargs):
                 raise ValueError(
                     'Middleware object must be callable. %s is not.' % mw)
             mws.append(mw)
-        return MiddlewareApp(mws, *args, **kwargs)
+        return get_middleware_app(base_app)(mws, *args, **kwargs)
     else:
-        return Application(*args, **kwargs)
+        return base_app(*args, **kwargs)

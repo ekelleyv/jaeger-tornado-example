@@ -5,17 +5,17 @@ import tornado.httpserver
 import tornado.httpclient
 import tornado.gen
 import tornado.web
+import tornado.routing
 
-from app.base_handler import BaseHandler
 from app.tornado_middleware.middleware_app import build_app
-from app.jaeger_tracer.middleware import JaegerTracerMiddleware
+from app.jaeger_tornado_tracer.middleware import JaegerTracerMiddleware
 
 
 PORT = 8888
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
-class ExampleHandler(BaseHandler):
+class ExampleHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def get(self):
@@ -48,7 +48,7 @@ def make_application():
         get_jaeger_middleware()
     ]
 
-    app = build_app(middlewares, routes, debug=True)
+    app = build_app(tornado.web.Application, middlewares, routes, debug=True)
     return app
 
 
