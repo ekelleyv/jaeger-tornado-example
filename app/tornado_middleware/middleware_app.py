@@ -1,13 +1,11 @@
 import logging
 
-import tornado.web
-
 from .middleware_handler import MiddlewareHandler
 
 log = logging.getLogger(__name__)
 
 
-def get_middleware_app(base=tornado.web.Application):
+def _get_middleware_app(base):
     class MiddlewareApp(base):
         """Middleware-aware Application class.
 
@@ -64,6 +62,6 @@ def build_app(base_app, middlewares, *args, **kwargs):
                 raise ValueError(
                     'Middleware object must be callable. %s is not.' % mw)
             mws.append(mw)
-        return get_middleware_app(base_app)(mws, *args, **kwargs)
+        return _get_middleware_app(base_app)(mws, *args, **kwargs)
     else:
         return base_app(*args, **kwargs)
